@@ -76,12 +76,8 @@ func (opts UnmarshalOptions) UnmarshalPlaceAuthRecord(data []byte) (*ddv1.PlaceA
 	}
 	record.SetDailyWorkPeriodCountry(dailyWorkPeriodCountry)
 
-	// dailyWorkPeriodRegion (1 byte)
-	dailyWorkPeriodRegion, err := UnmarshalEnum[ddv1.RegionNumeric](data[idxDailyWorkPeriodRegion])
-	if err != nil {
-		return nil, fmt.Errorf("unmarshal daily work period region: %w", err)
-	}
-	record.SetDailyWorkPeriodRegion(dailyWorkPeriodRegion)
+	// dailyWorkPeriodRegion (1 byte, raw byte — region codes are country-specific)
+	record.SetDailyWorkPeriodRegion(data[idxDailyWorkPeriodRegion : idxDailyWorkPeriodRegion+lenRegionNumeric])
 
 	// vehicleOdometerValue (3 bytes)
 	vehicleOdometerValue, err := opts.UnmarshalOdometer(data[idxVehicleOdometerValue : idxVehicleOdometerValue+lenOdometerShort])
@@ -140,9 +136,11 @@ func (opts MarshalOptions) MarshalPlaceAuthRecord(record *ddv1.PlaceAuthRecord) 
 	canvas[offset] = dailyWorkPeriodCountryByte
 	offset += 1
 
-	// dailyWorkPeriodRegion (1 byte)
-	dailyWorkPeriodRegionByte, _ := MarshalEnum(record.GetDailyWorkPeriodRegion())
-	canvas[offset] = dailyWorkPeriodRegionByte
+	// dailyWorkPeriodRegion (1 byte, raw byte)
+	region := record.GetDailyWorkPeriodRegion()
+	if len(region) > 0 {
+		canvas[offset] = region[0]
+	}
 	offset += 1
 
 	// vehicleOdometerValue (3 bytes)
